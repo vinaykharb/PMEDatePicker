@@ -9,11 +9,13 @@
 @interface PMEDatePicker () <UIPickerViewDataSource, UIPickerViewDelegate>
 
 @property (nonatomic, assign) NSInteger dayComponent;
+@property (nonatomic, assign) NSInteger weekComponent;
 @property (nonatomic, assign) NSInteger monthComponent;
 @property (nonatomic, assign) NSInteger yearComponent;
 @property (nonatomic, assign) NSInteger hourComponent;
 @property (nonatomic, assign) NSInteger minuteComponent;
 @property (nonatomic, assign) NSInteger ampmComponent;
+@property (nonatomic, strong) NSArray* shortWeekdayNames;
 @property (nonatomic, strong) NSArray* shortMonthNames;
 @property (nonatomic, strong) NSArray* ampmSymbols;
 @property (nonatomic, strong) NSArray* uniqueSymbols;
@@ -84,7 +86,9 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 - (NSInteger)realNumberOfRowsInComponent:(NSInteger)component {
     if (component == self.dayComponent) {
         return 31;
-    } else if (component == self.monthComponent) {
+	} else if (component == self.weekComponent) {
+		return 7;
+	} else if (component == self.monthComponent) {
         return 12;
     } else if (component == self.yearComponent) {
         NSInteger minimumYear = [[[NSCalendar currentCalendar] components:PMEPickerViewComponents fromDate:self.minimumDate] year];
@@ -119,6 +123,7 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 
 - (void)refreshCurrentLocale {
     self.dateFormatter = nil;
+	self.shortWeekdayNames = nil;
     self.shortMonthNames = nil;
     self.ampmSymbols = nil;
     self.dateFormatTemplate = self.dateFormatTemplate;
@@ -133,6 +138,9 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
     if (self.dayComponent != NSNotFound) {
         [components setDay:[self realSelectedRowInComponent:self.dayComponent] + 1];
     }
+	if (self.weekComponent != NSNotFound) {
+		[components setWeek:[self realSelectedRowInComponent:self.weekComponent] + 1];
+	}
     if (self.monthComponent != NSNotFound) {
         [components setMonth:[self realSelectedRowInComponent:self.monthComponent] + 1];
     }
@@ -160,6 +168,9 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
     if (self.dayComponent != NSNotFound) {
         [self selectRow:[components day] - 1 inComponent:self.dayComponent animated:animated];
     }
+	if (self.weekComponent != NSNotFound) {
+		[self selectRow:[components week] - 1 inComponent:self.weekComponent animated:animated];
+	}
     if (self.monthComponent != NSNotFound) {
         [self selectRow:[components month] - 1 inComponent:self.monthComponent animated:animated];
     }
@@ -195,6 +206,13 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
     return _shortMonthNames;
 }
 
+- (NSArray *)shortWeekdayNames {
+	if (!_shortWeekdayNames) {
+		_shortWeekdayNames = [self.dateFormatter shortWeekdaySymbols];
+	}
+	return _shortWeekdayNames;
+}
+
 - (NSArray *)ampmSymbols {
     if (!_ampmSymbols) {
         _ampmSymbols = @[[self.dateFormatter AMSymbol], [self.dateFormatter PMSymbol]];
@@ -217,6 +235,7 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
     }
     
     self.dayComponent = [uniqueSymbols indexOfObject:@"d"];
+	self.weekComponent = [uniqueSymbols indexOfObject:@"w"];
     self.monthComponent = [uniqueSymbols indexOfObject:@"M"];
     self.yearComponent = [uniqueSymbols indexOfObject:@"y"];
     self.hourComponent = [uniqueSymbols indexOfObject:@"H"];
@@ -260,7 +279,9 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
     if (component == self.dayComponent) {
         long l = row + 1;
         return [NSString stringWithFormat:@"%li", l];
-    } else if (component == self.monthComponent) {
+	} else if (component == self.weekComponent) {
+		return self.shortWeekdayNames[row];
+	} else if (component == self.monthComponent) {
         return self.shortMonthNames[row];
     } else if (component == self.yearComponent) {
         return [NSString stringWithFormat:@"%li", (long)[self yearForRow:row]];
@@ -290,7 +311,9 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 - (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component {
     if (component == self.dayComponent) {
         return 30.;
-    } else if (component == self.monthComponent) {
+	} else if (component == self.weekComponent) {
+		return 65.;
+	} else if (component == self.monthComponent) {
         return 65.;
     } else if (component == self.yearComponent) {
         return 60.;
