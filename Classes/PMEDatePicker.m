@@ -9,7 +9,6 @@
 @interface PMEDatePicker () <UIPickerViewDataSource, UIPickerViewDelegate>
 
 @property (nonatomic, assign) NSInteger dayComponent;
-@property (nonatomic, assign) NSInteger weekDayComponent;
 @property (nonatomic, assign) NSInteger monthComponent;
 @property (nonatomic, assign) NSInteger yearComponent;
 @property (nonatomic, assign) NSInteger hourComponent;
@@ -17,7 +16,6 @@
 @property (nonatomic, assign) NSInteger ampmComponent;
 @property (nonatomic, strong) NSArray* shortMonthNames;
 @property (nonatomic, strong) NSArray* ampmSymbols;
-@property (nonatomic, strong) NSArray* weekdaySymbols;
 @property (nonatomic, strong) NSArray* uniqueSymbols;
 @property (nonatomic, strong, readwrite) NSDateFormatter* dateFormatter;
 @property (nonatomic, assign, readonly) BOOL is24HourMode;
@@ -28,7 +26,7 @@
 @implementation PMEDatePicker
 
 static const NSInteger PMEPickerViewMaxNumberOfRows = 16384;
-static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCalendarUnitWeekday | NSCalendarUnitMonth | NSCalendarUnitYear | NSCalendarUnitHour | NSCalendarUnitMinute;
+static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCalendarUnitMonth | NSCalendarUnitYear | NSCalendarUnitHour | NSCalendarUnitMinute;
 
 @synthesize date = _date;
 
@@ -86,8 +84,6 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 - (NSInteger)realNumberOfRowsInComponent:(NSInteger)component {
 	if (component == self.dayComponent) {
 		return 31;
-	} else if (component == self.weekDayComponent) {
-		return 7;
 	} else if (component == self.monthComponent) {
 		return 12;
 	} else if (component == self.yearComponent) {
@@ -123,7 +119,6 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 
 - (void)refreshCurrentLocale {
 	self.dateFormatter = nil;
-	self.weekdaySymbols = nil;
 	self.shortMonthNames = nil;
 	self.ampmSymbols = nil;
 	self.dateFormatTemplate = self.dateFormatTemplate;
@@ -137,9 +132,6 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 	[components setCalendar:[NSCalendar currentCalendar]];
 	if (self.dayComponent != NSNotFound) {
 		[components setDay:[self realSelectedRowInComponent:self.dayComponent] + 1];
-	}
-	if (self.weekDayComponent != NSNotFound) {
-		[components setWeekday:[self realSelectedRowInComponent:self.weekDayComponent] + 1];
 	}
 	if (self.monthComponent != NSNotFound) {
 		[components setMonth:[self realSelectedRowInComponent:self.monthComponent] + 1];
@@ -167,9 +159,6 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 	NSDateComponents *components = [[NSCalendar currentCalendar] components:PMEPickerViewComponents fromDate:date];
 	if (self.dayComponent != NSNotFound) {
 		[self selectRow:[components day] - 1 inComponent:self.dayComponent animated:animated];
-	}
-	if (self.weekDayComponent != NSNotFound) {
-		[self selectRow:[components weekday] - 1 inComponent:self.weekDayComponent animated:animated];
 	}
 	if (self.monthComponent != NSNotFound) {
 		[self selectRow:[components month] - 1 inComponent:self.monthComponent animated:animated];
@@ -201,16 +190,9 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 
 - (NSArray *)shortMonthNames {
 	if (!_shortMonthNames) {
-		_shortMonthNames = [self.dateFormatter shortMonthSymbols];
+		_shortMonthNames = [self.dateFormatter monthSymbols];
 	}
 	return _shortMonthNames;
-}
-
-- (NSArray *)weekdaySymbols {
-	if (!_weekdaySymbols) {
-		_weekdaySymbols = [self.dateFormatter weekdaySymbols];
-	}
-	return _weekdaySymbols;
 }
 
 - (NSArray *)ampmSymbols {
@@ -224,7 +206,7 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 	_dateFormatTemplate = dateFormatTemplate;
 	NSString* dateFormat = [NSDateFormatter dateFormatFromTemplate:dateFormatTemplate options:0 locale:[NSLocale autoupdatingCurrentLocale]];
 
-	NSCharacterSet *symbolsToRemove = [[NSCharacterSet characterSetWithCharactersInString:@"wyMdHhma"] invertedSet];
+	NSCharacterSet *symbolsToRemove = [[NSCharacterSet characterSetWithCharactersInString:@"yMdHhma"] invertedSet];
 	NSString* symbols = [[dateFormat componentsSeparatedByCharactersInSet:symbolsToRemove] componentsJoinedByString:@""];
 	NSMutableArray* uniqueSymbols = [NSMutableArray array];
 	for (NSUInteger i = 0, maxI = [symbols length]; i < maxI; i++) {
@@ -235,7 +217,6 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 	}
 
 	self.dayComponent = [uniqueSymbols indexOfObject:@"d"];
-	self.weekDayComponent = [uniqueSymbols indexOfObject:@"w"];
 	self.monthComponent = [uniqueSymbols indexOfObject:@"M"];
 	self.yearComponent = [uniqueSymbols indexOfObject:@"y"];
 	self.hourComponent = [uniqueSymbols indexOfObject:@"H"];
@@ -279,8 +260,6 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 	if (component == self.dayComponent) {
 		long l = row + 1;
 		return [NSString stringWithFormat:@"%li", l];
-	} else if (component == self.weekDayComponent) {
-		return self.weekdaySymbols[row];
 	} else if (component == self.monthComponent) {
 		return self.shortMonthNames[row];
 	} else if (component == self.yearComponent) {
@@ -300,44 +279,57 @@ static const NSCalendarUnit PMEPickerViewComponents = NSCalendarUnitDay | NSCale
 	UILabel* label = (UILabel*)view;
 	if (!label) {
 		label = [UILabel new];
-		label.font = [UIFont systemFontOfSize:20.];
+		UIFont* font = [UIFont fontWithName:@"HelveticaNeue" size: 22];
+		if (font != nil) {
+			label.font = font;
+		} else {
+			label.font = [UIFont systemFontOfSize:20.];
+		}
 		label.textAlignment = NSTextAlignmentCenter;
 	}
 	label.text = [self pickerView:pickerView titleForRow:row forComponent:component];
-
+	label.textColor = [UIColor whiteColor];
 	return label;
 }
 
 - (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component {
 	if (component == self.dayComponent) {
-		return 30.;
-	} else if (component == self.weekDayComponent) {
-		return 65.;
+		return 60.;
 	} else if (component == self.monthComponent) {
-		return 65.;
+		return 165.;
 	} else if (component == self.yearComponent) {
 		return 60.;
 	} else if (component == self.hourComponent) {
-		return 30.;
+		return 80.;
 	} else if (component == self.minuteComponent) {
-		return 30.;
+		return 80.;
 	} else if (component == self.ampmComponent) {
-		return 50.;
+		return 80.;
 	}
 	return 0.;
 }
 
+- (CGFloat)pickerView:(UIPickerView *)pickerView rowHeightForComponent:(NSInteger)component {
+	return 30.0;
+}
+
 - (void)pickerView:(UIPickerView *)pickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component {
+
+
 	if (row > 0) {
 		row = row % [self realNumberOfRowsInComponent:component];
 	}
 	NSDate* date = self.date;
+
 	if ([date timeIntervalSince1970] > [self.maximumDate timeIntervalSince1970]) {
 		date = self.maximumDate;
+	}
+	if ([date timeIntervalSince1970] < [self.minimumDate timeIntervalSince1970]) {
+		date = self.minimumDate;
 	}
 	[self selectRow:row inComponent:component animated:NO];
 	[self setDate:date animated:YES];
 	[self.dateDelegate datePicker:self didSelectDate:date];
 }
 
-	@end
+@end
